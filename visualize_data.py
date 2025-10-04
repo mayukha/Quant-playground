@@ -66,19 +66,55 @@ ax3.legend()
 ax3.grid(True, alpha=0.3)
 plt.setp(ax3.xaxis.get_majorticklabels(), rotation=45)
 
-# 4. CANDLESTICK PATTERNS ANALYSIS
+# 4. CANDLESTICK CHART (Last 30 days for clarity)
 ax4 = plt.subplot(4, 2, 5)
-# Histogram of body sizes
-ax4.hist(df['Body_Size'], bins=15, alpha=0.7, color='blue', edgecolor='black')
-ax4.set_title('Distribution of Candlestick Body Sizes', fontsize=14, fontweight='bold')
-ax4.set_xlabel('Body Size ($)', fontsize=12)
-ax4.set_ylabel('Frequency', fontsize=12)
+# Use last 30 days for better visibility
+recent_data = df.tail(30).copy()
+recent_data.reset_index(drop=True, inplace=True)
+
+# Create candlestick chart manually
+for i, (idx, row) in enumerate(recent_data.iterrows()):
+    # Determine color: green if close > open, red if close < open
+    if row['Close'] >= row['Open']:
+        color = 'green'
+        body_bottom = row['Open']
+        body_top = row['Close']
+    else:
+        color = 'red'
+        body_bottom = row['Close']
+        body_top = row['Open']
+    
+    # Draw the wick (high-low line)
+    ax4.plot([i, i], [row['Low'], row['High']], color='black', linewidth=1, alpha=0.8)
+    
+    # Draw the body (rectangle)
+    body_height = abs(row['Close'] - row['Open'])
+    if body_height > 0.01:  # Only draw if there's a meaningful body
+        rect = plt.Rectangle((i-0.3, body_bottom), 0.6, body_height, 
+                           facecolor=color, alpha=0.7, edgecolor='black', linewidth=0.5)
+        ax4.add_patch(rect)
+    else:
+        # Doji - draw a line when open equals close
+        ax4.plot([i-0.3, i+0.3], [row['Close'], row['Close']], color='black', linewidth=2)
+
+ax4.set_title('Candlestick Chart (Last 30 Days)', fontsize=14, fontweight='bold')
+ax4.set_ylabel('Price ($)', fontsize=12)
+ax4.set_xlabel('Days (Most Recent 30)', fontsize=12)
 ax4.grid(True, alpha=0.3)
 
-# Add statistics
-body_stats = f'Mean: ${df["Body_Size"].mean():.2f}\nMedian: ${df["Body_Size"].median():.2f}'
-ax4.text(0.98, 0.98, body_stats, transform=ax4.transAxes, verticalalignment='top', 
-         horizontalalignment='right', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+# Add date labels for key points
+if len(recent_data) > 0:
+    step = max(1, len(recent_data) // 6)  # Show ~6 date labels
+    for i in range(0, len(recent_data), step):
+        if i < len(recent_data):
+            ax4.text(i, ax4.get_ylim()[0], recent_data.iloc[i]['Date'].strftime('%m/%d'), 
+                    rotation=45, ha='center', fontsize=8)
+
+# Add legend
+from matplotlib.patches import Patch
+legend_elements = [Patch(facecolor='green', alpha=0.7, label='Bullish (Close > Open)'),
+                  Patch(facecolor='red', alpha=0.7, label='Bearish (Close < Open)')]
+ax4.legend(handles=legend_elements, loc='upper left', fontsize=9)
 
 # 5. VOLATILITY PATTERNS
 ax5 = plt.subplot(4, 2, 6)
